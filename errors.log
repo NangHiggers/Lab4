@@ -1,0 +1,27 @@
+<errorentry>
+	<datetime>2025-05-13 04:14:33 (+03)</datetime>
+	<errornum>256</errornum>
+	<errortype>Пользовательская ошибка</errortype>
+	<errormsg>Некорректные параметры: ожидаются массивы</errormsg>
+	<scriptname>C:\OSPanel\home\labs\lab4\error_handler.php</scriptname>
+	<scriptlinenum>45</scriptlinenum>
+</errorentry>
+
+<errorentry>
+	<datetime>2025-05-13 04:14:33 (+03)</datetime>
+	<errornum>256</errornum>
+	<errortype>Пользовательская ошибка</errortype>
+	<errormsg>Ошибка: векторы разной размерности</errormsg>
+	<scriptname>C:\OSPanel\home\labs\lab4\error_handler.php</scriptname>
+	<scriptlinenum>50</scriptlinenum>
+</errorentry>
+
+<errorentry>
+	<datetime>2025-05-13 04:14:33 (+03)</datetime>
+	<errornum>512</errornum>
+	<errortype>Пользовательское предупреждение</errortype>
+	<errormsg>Координата не является числом — используется 0</errormsg>
+	<scriptname>C:\OSPanel\home\labs\lab4\error_handler.php</scriptname>
+	<scriptlinenum>57</scriptlinenum>
+</errorentry>
+
