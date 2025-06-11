@@ -1,6 +1,5 @@
 <?php
-session_start();
-require 'db.php';
+require_once 'db.php';
 $success = '';
 $error = '';
 
@@ -60,7 +59,6 @@ $totalImporters = $totalRow['total'];
 <?php include 'header.php'; ?>
 <div class="contact-wrapper centered-container">
 
-    <!-- Левая колонка: форма -->
     <div style="flex: 1;">
         <h2>Контакты</h2>
         <p>Свяжитесь с нами, используя форму ниже:</p>
@@ -95,7 +93,6 @@ $totalImporters = $totalRow['total'];
         </form>
     </div>
 
-    <!-- Правая колонка: информация об импортере -->
     <div class="importer-info">
     <h3>Информация о точке импорта</h3>
     <?php if ($importer): ?>

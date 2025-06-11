@@ -1,6 +1,5 @@
 <?php
-session_start();
-require 'db.php';
+require_once 'db.php';
 
 if (!isset($_GET['compare']) || empty($_GET['compare'])) {
     header("Location: catalog.php");

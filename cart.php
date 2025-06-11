@@ -1,6 +1,6 @@
 <?php
 session_start();
-require 'db.php';
+require_once 'db.php';
 
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
@@ -9,6 +9,19 @@ if (!isset($_SESSION['cart'])) {
 if (isset($_POST['remove'])) {
     $idToRemove = $_POST['remove'];
     unset($_SESSION['cart'][$idToRemove]);
+}
+
+$editId = $_POST['edit'] ?? null;
+
+if (isset($_POST['save_quantity'])) {
+    $idToSave = $_POST['product_id'];
+    $newQuantity = (int)$_POST['new_quantity'];
+    if ($newQuantity > 0) {
+        $_SESSION['cart'][$idToSave] = $newQuantity;
+    } else {
+        unset($_SESSION['cart'][$idToSave]);
+    }
+    $editId = null;
 }
 
 $cartItems = $_SESSION['cart'];
@@ -43,23 +56,39 @@ $warehouses = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             <div class="product-card">
                 <h3><?= htmlspecialchars($item['Модель']) ?></h3>
                 <p><strong>Цена:</strong> <?= number_format($item['Цена'], 0, ',', ' ') ?> ₽</p>
-                <p><strong>Количество:</strong> <?= $_SESSION['cart'][$item['ID-Процессора']] ?> шт.</p>
-                <form method="post">
+
+                <?php if ($editId == $item['ID-Процессора']): ?>
+                    <form method="post" style="display:inline-block; margin-bottom:10px;">
+                        <input type="hidden" name="product_id" value="<?= $item['ID-Процессора'] ?>">
+                        <label for="new_quantity_<?= $item['ID-Процессора'] ?>">Количество:</label>
+                        <input type="number" id="new_quantity_<?= $item['ID-Процессора'] ?>" name="new_quantity" value="<?= $_SESSION['cart'][$item['ID-Процессора']] ?>" min="1" style="width:60px;">
+                        <button type="submit" name="save_quantity">Сохранить</button>
+                        <button type="submit" name="cancel_edit" value="1">Отмена</button>
+                    </form>
+                <?php else: ?>
+                    <p><strong>Количество:</strong> <?= $_SESSION['cart'][$item['ID-Процессора']] ?> шт.</p>
+                    <form method="post" style="display:inline-block;">
+                        <button type="submit" name="edit" value="<?= $item['ID-Процессора'] ?>">Редактировать</button>
+                    </form>
+                <?php endif; ?>
+
+                <form method="post" style="display:inline-block;">
                     <button type="submit" name="remove" value="<?= $item['ID-Процессора'] ?>">Удалить</button>
                 </form>
             </div>
         <?php endforeach; ?>
     </div>
-        <form method="post" action="checkout.php">
-            <label for="warehouse">Выберите склад:</label>
-            <select name="warehouse" id="warehouse" required>
-                <?php foreach ($warehouses as $warehouse): ?>
-                    <option value="<?= $warehouse['ID-Склада'] ?>"><?= htmlspecialchars($warehouse['Местоположение']) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <br><br>
-            <button type="submit">Оформить заказ</button>
-        </form>
+
+    <form method="post" action="checkout.php">
+        <label for="warehouse">Выберите склад:</label>
+        <select name="warehouse" id="warehouse" required>
+            <?php foreach ($warehouses as $warehouse): ?>
+                <option value="<?= $warehouse['ID-Склада'] ?>"><?= htmlspecialchars($warehouse['Местоположение']) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <br><br>
+        <button type="submit">Оформить заказ</button>
+    </form>
 
     <?php endif; ?>
 </div>

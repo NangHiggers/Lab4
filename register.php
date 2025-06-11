@@ -1,8 +1,6 @@
 <?php
-session_start();
-require 'db.php';
+require_once 'db.php';
 
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $error   = '';
 $success = '';
@@ -21,21 +19,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         validate_password($pass) &&
         validate_unique_email($connection, $email)
     ) {
-        try {
-            $hash = password_hash($pass, PASSWORD_DEFAULT);
-            $stmt = $connection->prepare("INSERT INTO `Импортеры` (`email`, `pass`) VALUES (?, ?)");
-            $stmt->bind_param("ss", $email, $hash);
-            $stmt->execute();
+        $hash = password_hash($pass, PASSWORD_DEFAULT);
+        $stmt = $connection->prepare("INSERT INTO `Импортеры` (`email`, `pass`) VALUES (?, ?)");
 
-            $success = 'Регистрация успешна! <a href="login.php">Войти</a>';
-        } catch (Exception $ex) {
-            log_custom_error('db', $ex->getMessage(), __FILE__, __LINE__);
-            $error = 'Системная ошибка базы данных. Попробуйте позже.';
+        if (!$stmt) {
+            $errorCode = mysqli_errno($connection);
+            $errorText = mysqli_error($connection);
+            $connectError = mysqli_connect_error();
+            $error = "Ошибка подготовки запроса (код $errorCode): $errorText. Подключение: $connectError.";
+        } else {
+            $stmt->bind_param("ss", $email, $hash);
+            if (!$stmt->execute()) {
+                $errorCode = mysqli_errno($connection);
+                $errorText = mysqli_error($connection);
+                $error = "Ошибка выполнения запроса (код $errorCode): $errorText.";
+            } else {
+                $success = 'Регистрация успешна! <a href="login.php">Войти</a>';
+            }
         }
     } else {
         $error = 'Форма содержит ошибки. Проверьте введённые данные.';
     }
 }
+
 ?>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
@@ -44,7 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="auth-form">
     <h2>Регистрация</h2>
 
-    <!-- Вывод flash ошибок -->
     <?php if (!empty($_SESSION['flash_errors'])): ?>
         <div class="flash-errors" style="background:#fdd; color:#900; padding:10px; border:1px solid #900; margin-bottom:15px;">
             <?php foreach ($_SESSION['flash_errors'] as $flash_error): ?>

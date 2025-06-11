@@ -1,6 +1,5 @@
 <?php
-session_start();
-require 'db.php';
+require_once 'db.php';
 
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
@@ -68,67 +67,85 @@ $warehouses = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 <?php include 'header.php'; ?>
 <div class="account-container">
 
-<h2>Редактировать аккаунт</h2>
-
-<?php if ($message): ?>
+  <h2>Редактировать аккаунт</h2>
+  <?php if ($message): ?>
     <p class="message"><?= htmlspecialchars($message) ?></p>
-<?php endif; ?>
+  <?php endif; ?>
 
-<form method="post">
-    <input type="hidden" name="update_profile" value="1">
-    <label>Новое местоположение:</label>
-    <input type="text" name="Местоположение" value="<?= htmlspecialchars($user['Местоположение'] ?? '') ?>">
-    <button type="submit">Сохранить</button>
-</form>
+  <h3>Редактировать склады</h3>
+  <div class="warehouses-row">
+    <?php if (empty($warehouses)): ?>
+      <p>Склады не найдены.</p>
+    <?php else: ?>
+      <?php foreach ($warehouses as $wh): ?>
+        <form method="post" class="form-card">
+          <input type="hidden" name="update_warehouse" value="1">
+          <input type="hidden" name="ID-Склада" value="<?= $wh['ID-Склада'] ?>">
 
-<hr>
-
-<h3>Редактировать склады</h3>
-<?php if (empty($warehouses)): ?>
-    <p>Склады не найдены.</p>
-<?php else: ?>
-    <?php foreach ($warehouses as $wh): ?>
-        <form method="post">
-            <input type="hidden" name="update_warehouse" value="1">
-            <input type="hidden" name="ID-Склада" value="<?= $wh['ID-Склада'] ?>">
-
-            <label>Местоположение склада:</label>
+          <div class="form-group">
+            <label>Местоположение:</label>
             <input type="text" name="w_Местоположение" value="<?= htmlspecialchars($wh['Местоположение']) ?>">
+          </div>
 
+          <div class="form-group">
             <label>Площадь (м²):</label>
             <input type="number" name="w_Площадь" value="<?= (int)$wh['Площадь'] ?>">
+          </div>
 
+          <div class="form-group">
             <label>Статус:</label>
             <select name="w_Статус">
-                <option value="1" <?= $wh['Статус'] == 1 ? 'selected' : '' ?>>Активен</option>
-                <option value="0" <?= $wh['Статус'] == 0 ? 'selected' : '' ?>>Неактивен</option>
+              <option value="1" <?= $wh['Статус'] == 1 ? 'selected' : '' ?>>Активен</option>
+              <option value="0" <?= $wh['Статус'] == 0 ? 'selected' : '' ?>>Неактивен</option>
             </select>
+          </div>
 
-            <button type="submit">Сохранить изменения</button>
+          <button type="submit" class="btn-save">Сохранить склад</button>
         </form>
-    <?php endforeach; ?>
-<?php endif; ?>
+      <?php endforeach; ?>
+    <?php endif; ?>
+  </div>
 
-<hr>
-<h3>Добавить новый склад</h3>
-<form method="post">
-    <input type="hidden" name="create_warehouse" value="1">
+  <div class="profile-add-row">
+    <div class="form-card">
+      <h3>Профиль импортера</h3>
+      <form method="post">
+        <input type="hidden" name="update_profile" value="1">
+        <div class="form-group">
+          <label>Местоположение точки:</label>
+          <input type="text" name="Местоположение" value="<?= htmlspecialchars($user['Местоположение'] ?? '') ?>">
+        </div>
+        <button type="submit" class="btn-save">Сохранить профиль</button>
+      </form>
+    </div>
 
-    <label>Местоположение:</label>
-    <input type="text" name="new_Местоположение" required>
+    <div class="form-card">
+      <h3>Добавить склад</h3>
+      <form method="post">
+        <input type="hidden" name="create_warehouse" value="1">
+        <div class="form-group">
+          <label>Местоположение:</label>
+          <input type="text" name="new_Местоположение" required>
+        </div>
 
-    <label>Площадь (м²):</label>
-    <input type="number" name="new_Площадь" required>
+        <div class="form-group">
+          <label>Площадь (м²):</label>
+          <input type="number" name="new_Площадь" required>
+        </div>
 
-    <label>Статус:</label>
-    <select name="new_Статус">
-        <option value="1">Активен</option>
-        <option value="0">Неактивен</option>
-    </select>
+        <div class="form-group">
+          <label>Статус:</label>
+          <select name="new_Статус">
+            <option value="1">Активен</option>
+            <option value="0">Неактивен</option>
+          </select>
+        </div>
 
-    <button type="submit">Добавить склад</button>
-</form>
+        <button type="submit" class="btn-add">Добавить склад</button>
+      </form>
+    </div>
+  </div>
 
-<a href="cabinet.php" class="btn btn-secondary">Назад в кабинет</a>
+  <a href="cabinet.php" class="btn-back">Назад в кабинет</a>
 </div>
 <?php include 'footer.php'; ?>

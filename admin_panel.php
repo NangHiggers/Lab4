@@ -299,10 +299,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		exit();
 	}
 }
-
 if (isset($_GET['delete'])) {
     $table = $_GET['table'];
     $id = (int)$_GET['id'];
+    $section = $_GET['section'] ?? '';
     
     $allowed_tables = [
         'Поставщики' => 'ID-Поставщика',
@@ -315,6 +315,9 @@ if (isset($_GET['delete'])) {
     if (array_key_exists($table, $allowed_tables)) {
         $primaryKey = $allowed_tables[$table];
         $connection->query("DELETE FROM `$table` WHERE `$primaryKey` = $id");
+        
+        header("Location: ?section=$section");
+        exit();
     }
 }
 
@@ -590,7 +593,7 @@ if ($selected_importer) {
 														</a>
 													<?php endif; ?>
 
-													<a href="?delete&table=Заказы&id=<?= $order['ID-Заказа'] ?>" 
+													<a href="?delete&table=Заказы&id=<?= $order['ID-Заказа'] ?>&section=<?= $section ?>" 
 													   class="btn btn-danger"
 													   onclick="return confirm('Удалить весь заказ?')">
 														Удалить заказ
@@ -647,7 +650,7 @@ if ($selected_importer) {
                                             <td>
                                                 <div class="btn-group view-mode">
                                                     <button type="button" class="btn btn-sm btn-warning" onclick="enableEdit(<?= $supplier['ID-Поставщика'] ?>)">Редактировать</button>
-                                                    <a href="?delete&table=Поставщики&id=<?= $supplier['ID-Поставщика'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Удалить поставщика?')">Удалить</a>
+                                                    <a href="?delete&table=Поставщики&id=<?= $supplier['ID-Поставщика'] ?>&section=<?= $section ?>" class="btn btn-sm btn-danger" onclick="return confirm('Удалить поставщика?')">Удалить</a>
                                                 </div>
 
                                                 <div class="btn-group edit-mode d-none">
@@ -700,380 +703,418 @@ if ($selected_importer) {
         <?php endif; ?>
 
         <?php if ($section === 'processors'): ?>
-            <div class="card">
-                <div class="card-header">Управление процессорами</div>
-                <div class="card-body">
-                    <?php if (isset($_GET['edit'])): 
-                        $processor = $connection->query("SELECT * FROM `Процессоры` WHERE `ID-Процессора` = ".(int)$_GET['edit'])->fetch_assoc();
-                        $suppliers_list = $connection->query("SELECT * FROM `Поставщики`");
-                    ?>
-                        <form method="post">
-                            <input type="hidden" name="id" value="<?= $processor['ID-Процессора'] ?>">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <input type="text" name="model" class="form-control" 
-                                           value="<?= htmlspecialchars($processor['Модель']) ?>" placeholder="Модель" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <input type="number" name="price" class="form-control" 
-                                           value="<?= $processor['Цена'] ?>" step="0.01" placeholder="Цена" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <input type="date" name="date" class="form-control" 
-                                           value="<?= $processor['Дата Выпуска'] ?>" required>
-                                </div>
-                                <div class="col-12">
-                                    <textarea name="specs" class="form-control" 
-                                              placeholder="Характеристики" required><?= htmlspecialchars($processor['Характеристики']) ?></textarea>
-                                </div>
-                                <div class="col-md-6">
-                                    <input type="text" name="image" class="form-control" 
-                                           value="<?= htmlspecialchars($processor['image_url']) ?>" placeholder="URL изображения">
-                                </div>
-                                <div class="col-md-6">
-                                    <select name="supplier" class="form-select" required>
-                                        <?php while ($supplier = $suppliers_list->fetch_assoc()): ?>
-                                            <option value="<?= $supplier['ID-Поставщика'] ?>" 
-                                                <?= $supplier['ID-Поставщика'] == $processor['ID-Поставщика'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($supplier['Название']) ?>
-                                            </option>
-                                        <?php endwhile; ?>
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" name="update_processor" class="btn btn-primary">Сохранить</button>
-                                    <a href="?section=processors" class="btn btn-secondary">Отмена</a>
-                                </div>
-                            </div>
-                        </form>
-                    <?php else: ?>
-                        <div class="row">
-                            <div class="col-md-12">
-                                <h5>Список процессоров</h5>
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Модель</th>
-                                            <th>Цена</th>
-                                            <th>Изображение</th>
-                                            <th>Действия</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php while ($processor = $processors->fetch_assoc()): ?>
-                                            <tr>
-                                                <td><?= htmlspecialchars($processor['Модель']) ?></td>
-                                                <td><?= number_format($processor['Цена'], 0, ',', ' ') ?> ₽</td>
-                                                <td>
-                                                    <?php if ($processor['image_url']): ?>
-                                                        <img src="<?= $processor['image_url'] ?>" class="preview-image">
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <a href="?section=processors&edit=<?= $processor['ID-Процессора'] ?>" 
-                                                    class="btn btn-sm btn-warning">Редактировать️</a>
-                                                    <a href="?delete&table=Процессоры&id=<?= $processor['ID-Процессора'] ?>" 
-                                                    class="btn btn-sm btn-danger" 
-                                                    onclick="return confirm('Удалить процессор?')">Удалить️</a>
-                                                </td>
-                                            </tr>
-                                        <?php endwhile; ?>
-                                    </tbody>
-                                </table>
+		<div class="card">
+			<div class="card-header">Управление процессорами</div>
+			<div class="card-body">
+				<div class="row">
+					<div class="col-md-12">
+						<h5>Список процессоров</h5>
+						<table class="table table-hover w-100">
+							<thead>
+								<tr>
+									<th>Модель</th>
+									<th>Цена</th>
+									<th>Дата выпуска</th>
+									<th>Характеристики</th>
+									<th>Изображение</th>
+									<th>Поставщик</th>
+									<th style="width: 180px;">Действия</th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php 
+								$processors = $connection->query("SELECT p.*, s.`Название` as supplier_name 
+																FROM `Процессоры` p 
+																LEFT JOIN `Поставщики` s ON p.`ID-Поставщика` = s.`ID-Поставщика`");
+								$suppliers_list = $connection->query("SELECT * FROM `Поставщики`");
+								
+								while ($processor = $processors->fetch_assoc()): ?>
+									<tr id="row-<?= $processor['ID-Процессора'] ?>">
+										<form method="post">
+											<input type="hidden" name="id" value="<?= $processor['ID-Процессора'] ?>">
+											
+											<td class="view-mode"><?= htmlspecialchars($processor['Модель']) ?></td>
+											<td class="view-mode"><?= number_format($processor['Цена'], 0, ',', ' ') ?> ₽</td>
+											<td class="view-mode"><?= $processor['Дата Выпуска'] ?></td>
+											<td class="view-mode"><?= htmlspecialchars($processor['Характеристики']) ?></td>
+											<td class="view-mode">
+												<?php if ($processor['image_url']): ?>
+													<img src="<?= $processor['image_url'] ?>" class="preview-image">
+												<?php endif; ?>
+											</td>
+											<td class="view-mode"><?= htmlspecialchars($processor['supplier_name']) ?></td>
+											
+											<td class="edit-mode d-none">
+												<input type="text" name="model" class="form-control form-control-sm" 
+													   value="<?= htmlspecialchars($processor['Модель']) ?>" required>
+											</td>
+											<td class="edit-mode d-none">
+												<input type="number" name="price" class="form-control form-control-sm" 
+													   value="<?= $processor['Цена'] ?>" step="0.01" required>
+											</td>
+											<td class="edit-mode d-none">
+												<input type="date" name="date" class="form-control form-control-sm" 
+													   value="<?= $processor['Дата Выпуска'] ?>" required>
+											</td>
+											<td class="edit-mode d-none">
+												<textarea name="specs" class="form-control form-control-sm" 
+														  required><?= htmlspecialchars($processor['Характеристики']) ?></textarea>
+											</td>
+											<td class="edit-mode d-none">
+												<input type="text" name="image" class="form-control form-control-sm" 
+													   value="<?= htmlspecialchars($processor['image_url']) ?>">
+											</td>
+											<td class="edit-mode d-none">
+												<select name="supplier" class="form-select form-select-sm" required>
+													<?php 
+													$suppliers_list_edit = $connection->query("SELECT * FROM `Поставщики`");
+													while ($supplier = $suppliers_list_edit->fetch_assoc()): ?>
+														<option value="<?= $supplier['ID-Поставщика'] ?>" 
+															<?= $supplier['ID-Поставщика'] == $processor['ID-Поставщика'] ? 'selected' : '' ?>>
+															<?= htmlspecialchars($supplier['Название']) ?>
+														</option>
+													<?php endwhile; ?>
+												</select>
+											</td>
+											
+											<td>
+												<div class="btn-group view-mode">
+													<button type="button" class="btn btn-sm btn-warning" 
+															onclick="enableEdit(<?= $processor['ID-Процессора'] ?>)">
+														Редактировать
+													</button>
+													<a href="?delete&table=Процессоры&id=<?= $processor['ID-Процессора'] ?>&section=<?= $section ?>" 
+													   class="btn btn-sm btn-danger" 
+													   onclick="return confirm('Удалить процессор?')">
+														Удалить
+													</a>
+												</div>
+												
+												<div class="btn-group edit-mode d-none">
+													<button type="submit" name="update_processor" class="btn btn-sm btn-primary">
+														Сохранить
+													</button>
+													<button type="button" class="btn btn-sm btn-secondary" 
+															onclick="cancelEdit(<?= $processor['ID-Процессора'] ?>)">
+														Отмена
+													</button>
+												</div>
+											</td>
+										</form>
+									</tr>
+								<?php endwhile; ?>
+							</tbody>
+						</table>
 
-                                <button type="button" class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#addProcessorModal">
-                                    Добавить процессор
-                                </button>
-                            </div>
-                        </div>
+						<button type="button" class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#addProcessorModal">
+							Добавить процессор
+						</button>
+					</div>
+				</div>
 
-                        <div class="modal fade" id="addProcessorModal" tabindex="-1" aria-labelledby="addProcessorModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <form method="post" class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="addProcessorModalLabel">Добавить процессор</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <input type="text" name="model" class="form-control" placeholder="Модель" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <input type="number" name="price" class="form-control" step="0.01" placeholder="Цена" required>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <textarea name="specs" class="form-control" placeholder="Характеристики" required></textarea>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <input type="date" name="date" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <input type="text" name="image" class="form-control" placeholder="URL изображения">
-                                    </div>
-                                    <div class="col-md-12">
-                                        <select name="supplier" class="form-select" required>
-                                            <?php
-                                            $suppliers_list = $connection->query("SELECT * FROM `Поставщики`");
-                                            while ($supplier = $suppliers_list->fetch_assoc()):
-                                            ?>
-                                                <option value="<?= $supplier['ID-Поставщика'] ?>">
-                                                    <?= htmlspecialchars($supplier['Название']) ?>
-                                                </option>
-                                            <?php endwhile; ?>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="submit" name="add_processor" class="btn btn-success">Добавить</button>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                            </div>
-                            </form>
-                        </div>
-                        </div>
-                    <?php endif; ?>
+				<div class="modal fade" id="addProcessorModal" tabindex="-1" aria-labelledby="addProcessorModalLabel" aria-hidden="true">
+					<div class="modal-dialog modal-lg">
+						<form method="post" class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title" id="addProcessorModalLabel">Добавить процессор</h5>
+								<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+							</div>
+							<div class="modal-body">
+								<div class="row g-3">
+									<div class="col-md-6">
+										<input type="text" name="model" class="form-control" placeholder="Модель" required>
+									</div>
+									<div class="col-md-6">
+										<input type="number" name="price" class="form-control" step="0.01" placeholder="Цена" required>
+									</div>
+									<div class="col-md-12">
+										<textarea name="specs" class="form-control" placeholder="Характеристики" required></textarea>
+									</div>
+									<div class="col-md-6">
+										<input type="date" name="date" class="form-control" required>
+									</div>
+									<div class="col-md-6">
+										<input type="text" name="image" class="form-control" placeholder="URL изображения">
+									</div>
+									<div class="col-md-12">
+										<select name="supplier" class="form-select" required>
+											<?php while ($supplier = $suppliers_list->fetch_assoc()): ?>
+												<option value="<?= $supplier['ID-Поставщика'] ?>">
+													<?= htmlspecialchars($supplier['Название']) ?>
+												</option>
+											<?php endwhile; ?>
+										</select>
+									</div>
+								</div>
+							</div>
+							<div class="modal-footer">
+								<button type="submit" name="add_processor" class="btn btn-success">Добавить</button>
+								<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	<?php endif; ?>
 
-                </div>
-            </div>
-        <?php endif; ?>
+	<?php if ($section === 'importers'): ?>
+		<div class="card">
+			<div class="card-header">Управление импортерами</div>
+			<div class="card-body">
+				<div class="row">
+					<div class="col-md-12">
+						<h5>Список импортеров</h5>
+						<table class="table table-hover w-100">
+							<thead>
+								<tr>
+									<th>Местоположение</th>
+									<th>Email</th>
+									<th>Изображение</th>
+									<th style="width: 180px;">Действия</th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php 
+								$importers = $connection->query("SELECT * FROM `Импортеры`");
+								while ($importer = $importers->fetch_assoc()): ?>
+									<tr id="row-<?= $importer['ID-Точки импорта'] ?>">
+										<form method="post">
+											<input type="hidden" name="id" value="<?= $importer['ID-Точки импорта'] ?>">
+											
+											<td class="view-mode"><?= htmlspecialchars($importer['Местоположение']) ?></td>
+											<td class="view-mode"><?= htmlspecialchars($importer['email']) ?></td>
+											<td class="view-mode">
+												<?php if ($importer['image_url']): ?>
+													<img src="<?= $importer['image_url'] ?>" class="preview-image">
+												<?php endif; ?>
+											</td>
+											
+											<td class="edit-mode d-none">
+												<input type="text" name="location" class="form-control form-control-sm" 
+													   value="<?= htmlspecialchars($importer['Местоположение']) ?>" required>
+											</td>
+											<td class="edit-mode d-none">
+												<input type="email" name="email" class="form-control form-control-sm" 
+													   value="<?= htmlspecialchars($importer['email']) ?>" required>
+											</td>
+											<td class="edit-mode d-none">
+												<input type="text" name="image" class="form-control form-control-sm" 
+													   value="<?= htmlspecialchars($importer['image_url']) ?>">
+											</td>
+											<td class="edit-mode d-none">
+												<input type="password" name="pass" class="form-control form-control-sm" 
+													   placeholder="Новый пароль">
+											</td>
+											
+											<td>
+												<div class="btn-group view-mode">
+													<button type="button" class="btn btn-sm btn-warning" 
+															onclick="enableEdit(<?= $importer['ID-Точки импорта'] ?>)">
+														Редактировать
+													</button>
+													<a href="?delete&table=Импортеры&id=<?= $importer['ID-Точки импорта'] ?>&section=<?= $section ?>" 
+													   class="btn btn-sm btn-danger" 
+													   onclick="return confirm('Удалить импортера?')">
+														Удалить
+													</a>
+												</div>
+												
+												<div class="btn-group edit-mode d-none">
+													<button type="submit" name="update_importer" class="btn btn-sm btn-primary">
+														Сохранить
+													</button>
+													<button type="button" class="btn btn-sm btn-secondary" 
+															onclick="cancelEdit(<?= $importer['ID-Точки импорта'] ?>)">
+														Отмена
+													</button>
+												</div>
+											</td>
+										</form>
+									</tr>
+								<?php endwhile; ?>
+							</tbody>
+						</table>
 
-        <?php if ($section === 'importers'): ?>
-        <div class="card">
-            <div class="card-header">Управление импортерами</div>
-            <div class="card-body">
-                <?php if (isset($_GET['edit'])): 
-                    $importer = $connection->query("SELECT * FROM `Импортеры` WHERE `ID-Точки импорта` = ".(int)$_GET['edit'])->fetch_assoc();
-                ?>
-                    <form method="post">
-                        <input type="hidden" name="id" value="<?= $importer['ID-Точки импорта'] ?>">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <input type="text" name="location" class="form-control" 
-                                    value="<?= htmlspecialchars($importer['Местоположение']) ?>" placeholder="Местоположение" required>
-                            </div>
-                            <div class="col-md-6">
-                                <input type="email" name="email" class="form-control" 
-                                    value="<?= htmlspecialchars($importer['email']) ?>" placeholder="Email" required>
-                            </div>
-                            <div class="col-md-6">
-                                <input type="password" name="pass" class="form-control" placeholder="Новый пароль">
-                            </div>
-                            <div class="col-md-6">
-                                <input type="text" name="image" class="form-control" 
-                                    value="<?= htmlspecialchars($importer['image_url']) ?>" placeholder="URL изображения">
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" name="update_importer" class="btn btn-primary">Сохранить</button>
-                                <a href="?section=importers" class="btn btn-secondary">Отмена</a>
-                            </div>
-                        </div>
-                    </form>
-                <?php else: ?>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <h5>Список импортеров</h5>
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Местоположение</th>
-                                        <th>Email</th>
-                                        <th>Изображение</th>
-                                        <th>Действия</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($importer = $importers->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($importer['Местоположение']) ?></td>
-                                            <td><?= htmlspecialchars($importer['email']) ?></td>
-                                            <td>
-                                                <?php if ($importer['image_url']): ?>
-                                                    <img src="<?= $importer['image_url'] ?>" class="preview-image">
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <a href="?section=importers&edit=<?= $importer['ID-Точки импорта'] ?>" 
-                                                class="btn btn-sm btn-warning">Редактировать️</a>
-                                                <a href="?delete&table=Импортеры&id=<?= $importer['ID-Точки импорта'] ?>" 
-                                                class="btn btn-sm btn-danger" 
-                                                onclick="return confirm('Удалить импортера?')">Удалить️</a>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
+						<button type="button" class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#addImporterModal">
+							Добавить импортера
+						</button>
+					</div>
+				</div>
 
-                            <button type="button" class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#addImporterModal">
-                                Добавить импортера
-                            </button>
-                        </div>
-                    </div>
+				<div class="modal fade" id="addImporterModal" tabindex="-1" aria-labelledby="addImporterModalLabel" aria-hidden="true">
+					<div class="modal-dialog">
+						<form method="post" class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title" id="addImporterModalLabel">Добавить импортера</h5>
+								<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+							</div>
+							<div class="modal-body">
+								<div class="row g-3">
+									<div class="col-md-6">
+										<input type="text" name="location" class="form-control" placeholder="Местоположение" required>
+									</div>
+									<div class="col-md-6">
+										<input type="email" name="email" class="form-control" placeholder="Email" required>
+									</div>
+									<div class="col-md-6">
+										<input type="password" name="pass" class="form-control" placeholder="Пароль" required>
+									</div>
+									<div class="col-md-6">
+										<input type="text" name="image" class="form-control" placeholder="URL изображения">
+									</div>
+								</div>
+							</div>
+							<div class="modal-footer">
+								<button type="submit" name="add_importer" class="btn btn-success">Добавить</button>
+								<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	<?php endif; ?>
 
-                    <div class="modal fade" id="addImporterModal" tabindex="-1" aria-labelledby="addImporterModalLabel" aria-hidden="true">
-                        <div class="modal-dialog">
-                            <form method="post" class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="addImporterModalLabel">Добавить импортера</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <input type="text" name="location" class="form-control" placeholder="Местоположение" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <input type="email" name="email" class="form-control" placeholder="Email" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <input type="password" name="pass" class="form-control" placeholder="Пароль" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <input type="text" name="image" class="form-control" placeholder="URL изображения">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="submit" name="add_importer" class="btn btn-success">Добавить</button>
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    <?php endif; ?>
+    <?php if ($section === 'warehouses'): ?>
+		<div class="card">
+			<div class="card-header">Управление складами</div>
+			<div class="card-body">
+				<div class="row">
+					<div class="col-md-12">
+						<h5>Список складов</h5>
+						<table class="table table-hover w-100">
+							<thead>
+								<tr>
+									<th>Площадь</th>
+									<th>Адрес</th>
+									<th>Статус</th>
+									<th>Импортер</th>
+									<th style="width: 180px;">Действия</th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php 
+								$warehouses = $connection->query("SELECT w.*, i.`Местоположение` as importer_location 
+																 FROM `Склады` w 
+																 LEFT JOIN `Импортеры` i ON w.`ID-Точки импорта` = i.`ID-Точки импорта`");
+								$importers_list = $connection->query("SELECT * FROM `Импортеры`");
+								
+								while ($warehouse = $warehouses->fetch_assoc()): ?>
+									<tr id="row-<?= $warehouse['ID-Склада'] ?>">
+										<form method="post">
+											<input type="hidden" name="id" value="<?= $warehouse['ID-Склада'] ?>">
+											
+											<td class="view-mode"><?= $warehouse['Площадь'] ?> м²</td>
+											<td class="view-mode"><?= htmlspecialchars($warehouse['Местоположение']) ?></td>
+											<td class="view-mode"><?= $warehouse['Статус'] ? 'Активен' : 'Неактивен' ?></td>
+											<td class="view-mode"><?= htmlspecialchars($warehouse['importer_location']) ?></td>
+											
+											<td class="edit-mode d-none">
+												<input type="number" name="area" class="form-control form-control-sm" 
+													   value="<?= $warehouse['Площадь'] ?>" required>
+											</td>
+											<td class="edit-mode d-none">
+												<input type="text" name="location" class="form-control form-control-sm" 
+													   value="<?= htmlspecialchars($warehouse['Местоположение']) ?>" required>
+											</td>
+											<td class="edit-mode d-none">
+												<select name="status" class="form-select form-select-sm" required>
+													<option value="0" <?= $warehouse['Статус'] == 0 ? 'selected' : '' ?>>Неактивен</option>
+													<option value="1" <?= $warehouse['Статус'] == 1 ? 'selected' : '' ?>>Активен</option>
+												</select>
+											</td>
+											<td class="edit-mode d-none">
+												<select name="importer_id" class="form-select form-select-sm" required>
+													<?php 
+													$importers_list_edit = $connection->query("SELECT * FROM `Импортеры`");
+													while ($importer = $importers_list_edit->fetch_assoc()): ?>
+														<option value="<?= $importer['ID-Точки импорта'] ?>" 
+															<?= $importer['ID-Точки импорта'] == $warehouse['ID-Точки импорта'] ? 'selected' : '' ?>>
+															<?= htmlspecialchars($importer['Местоположение']) ?>
+														</option>
+													<?php endwhile; ?>
+												</select>
+											</td>
+											
+											<td>
+												<div class="btn-group view-mode">
+													<button type="button" class="btn btn-sm btn-warning" 
+															onclick="enableEdit(<?= $warehouse['ID-Склада'] ?>)">
+														Редактировать
+													</button>
+													<a href="?delete&table=Склады&id=<?= $warehouse['ID-Склада'] ?>&section=<?= $section ?>" 
+													   class="btn btn-sm btn-danger" 
+													   onclick="return confirm('Удалить склад?')">
+														Удалить
+													</a>
+												</div>
+												
+												<div class="btn-group edit-mode d-none">
+													<button type="submit" name="update_warehouse" class="btn btn-sm btn-primary">
+														Сохранить
+													</button>
+													<button type="button" class="btn btn-sm btn-secondary" 
+															onclick="cancelEdit(<?= $warehouse['ID-Склада'] ?>)">
+														Отмена
+													</button>
+												</div>
+											</td>
+										</form>
+									</tr>
+								<?php endwhile; ?>
+							</tbody>
+						</table>
 
-        <?php if ($section === 'warehouses'): ?>
-        <div class="card">
-            <div class="card-header">Управление складами</div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-12">
-                        <h5>Список складов</h5>
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Площадь</th>
-                                    <th>Адрес</th>
-                                    <th>Статус</th>
-                                    <th>Импортер</th>
-                                    <th>Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php while ($warehouse = $warehouses->fetch_assoc()): ?>
-                                    <tr>
-                                        <td><?= $warehouse['Площадь'] ?> м²</td>
-                                        <td><?= htmlspecialchars($warehouse['Местоположение']) ?></td>
-                                        <td><?= $warehouse['Статус'] ? 'Активен' : 'Неактивен' ?></td>
-                                        <td><?= htmlspecialchars($warehouse['importer_location']) ?></td>
-                                        <td>
-                                            <a href="?section=warehouses&edit=<?= $warehouse['ID-Склада'] ?>" 
-                                            class="btn btn-sm btn-warning">Редактировать️</a>
-                                            <a href="?delete&table=Склады&id=<?= $warehouse['ID-Склада'] ?>" 
-                                            class="btn btn-sm btn-danger" 
-                                            onclick="return confirm('Удалить склад?')">Удалить️</a>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                            </tbody>
-                        </table>
+						<button type="button" class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#addWarehouseModal">
+							Добавить склад
+						</button>
+					</div>
+				</div>
 
-                        <button type="button" class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#addWarehouseModal">
-                            Добавить склад
-                        </button>
-                    </div>
-                </div>
-
-                <div class="modal fade" id="addWarehouseModal" tabindex="-1" aria-labelledby="addWarehouseModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <form method="post" class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="addWarehouseModalLabel">Добавить склад</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <input type="number" name="area" class="form-control" placeholder="Площадь" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <input type="text" name="location" class="form-control" placeholder="Адрес" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <select name="status" class="form-select" required>
-                                            <option value="0">Неактивен</option>
-                                            <option value="1">Активен</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <select name="importer_id" class="form-select" required>
-                                            <?php
-                                            $importers_list = $connection->query("SELECT * FROM `Импортеры`");
-                                            while ($importer = $importers_list->fetch_assoc()):
-                                            ?>
-                                                <option value="<?= $importer['ID-Точки импорта'] ?>">
-                                                    <?= htmlspecialchars($importer['Местоположение']) ?>
-                                                </option>
-                                            <?php endwhile; ?>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="submit" name="add_warehouse" class="btn btn-success">Добавить</button>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-
-                <?php if (isset($_GET['edit'])): 
-                    $warehouse = $connection->query("SELECT * FROM `Склады` WHERE `ID-Склада` = ".(int)$_GET['edit'])->fetch_assoc();
-                    $importers_list = $connection->query("SELECT * FROM `Импортеры`");
-                ?>
-                    <hr class="my-4">
-                    <h5>Редактирование склада</h5>
-                    <form method="post">
-                        <input type="hidden" name="id" value="<?= $warehouse['ID-Склада'] ?>">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <input type="number" name="area" class="form-control" 
-                                    value="<?= $warehouse['Площадь'] ?>" placeholder="Площадь" required>
-                            </div>
-                            <div class="col-md-4">
-                                <input type="text" name="location" class="form-control" 
-                                    value="<?= htmlspecialchars($warehouse['Местоположение']) ?>" placeholder="Адрес" required>
-                            </div>
-                            <div class="col-md-4">
-                                <select name="status" class="form-select" required>
-                                    <option value="0" <?= $warehouse['Статус'] == 0 ? 'selected' : '' ?>>Неактивен</option>
-                                    <option value="1" <?= $warehouse['Статус'] == 1 ? 'selected' : '' ?>>Активен</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <select name="importer_id" class="form-select" required>
-                                    <?php while ($importer = $importers_list->fetch_assoc()): ?>
-                                        <option value="<?= $importer['ID-Точки импорта'] ?>" 
-                                            <?= $importer['ID-Точки импорта'] == $warehouse['ID-Точки импорта'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($importer['Местоположение']) ?>
-                                        </option>
-                                    <?php endwhile; ?>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" name="update_warehouse" class="btn btn-primary">Сохранить</button>
-                                <a href="?section=warehouses" class="btn btn-secondary">Отмена</a>
-                            </div>
-                        </div>
-                    </form>
-                <?php endif; ?>
-            </div>
-        </div>
-    <?php endif; ?>
+				<div class="modal fade" id="addWarehouseModal" tabindex="-1" aria-labelledby="addWarehouseModalLabel" aria-hidden="true">
+					<div class="modal-dialog modal-lg">
+						<form method="post" class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title" id="addWarehouseModalLabel">Добавить склад</h5>
+								<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+							</div>
+							<div class="modal-body">
+								<div class="row g-3">
+									<div class="col-md-6">
+										<input type="number" name="area" class="form-control" placeholder="Площадь" required>
+									</div>
+									<div class="col-md-6">
+										<input type="text" name="location" class="form-control" placeholder="Адрес" required>
+									</div>
+									<div class="col-md-6">
+										<select name="status" class="form-select" required>
+											<option value="0">Неактивен</option>
+											<option value="1">Активен</option>
+										</select>
+									</div>
+									<div class="col-md-6">
+										<select name="importer_id" class="form-select" required>
+											<?php while ($importer = $importers_list->fetch_assoc()): ?>
+												<option value="<?= $importer['ID-Точки импорта'] ?>">
+													<?= htmlspecialchars($importer['Местоположение']) ?>
+												</option>
+											<?php endwhile; ?>
+										</select>
+									</div>
+								</div>
+							</div>
+							<div class="modal-footer">
+								<button type="submit" name="add_warehouse" class="btn btn-success">Добавить</button>
+								<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	<?php endif; ?>
+	
     <?php if ($section === 'opw'): ?>
     <div class="card">
     <div class="card-header">Наличие</div>

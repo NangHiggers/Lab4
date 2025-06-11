@@ -1,46 +1,43 @@
 <?php
-// error_handler.php
 
-function log_custom_error($type, $message, $file = '', $line = '', $exit = false)
+set_error_handler('customErrorHandler');
+
+function customErrorHandler($errno, $errstr, $errfile, $errline)
 {
     $datetime = date("Y-m-d H:i:s");
-    $types = [
-        'error'    => 'Ошибка',
-        'warning'  => 'Предупреждение',
-        'notice'   => 'Уведомление',
-        'validate' => 'Ошибка валидации',
-        'captcha'  => 'Ошибка капчи',
-        'db'       => 'Ошибка базы данных',
-    ];
-    $typename = $types[strtolower($type)] ?? 'Неизвестный тип';
 
-    $log = "[{$datetime}] {$typename}: {$message}";
-    if ($file !== '') $log .= " в {$file}";
-    if ($line !== '') $log .= " на строке {$line}";
-    $log .= "\n";
+    $types = [
+        E_USER_ERROR      => 'Критическая ошибка',
+        E_USER_WARNING    => 'Предупреждение',
+        E_USER_NOTICE     => 'Уведомление',
+        E_WARNING         => 'Предупреждение ',
+        E_NOTICE          => 'Уведомление ',
+    ];
+
+    $type = $types[$errno] ?? "Неизвестный тип [$errno]";
+    $log = "[{$datetime}] {$type}: {$errstr} в {$errfile} на строке {$errline}\n";
 
     $log_dir = __DIR__ . '/logs';
-    $log_file = $log_dir . '/errors.log';
-    if (!file_exists($log_dir)) {
-        mkdir($log_dir, 0777, true);
-    }
-
-    file_put_contents($log_file, $log, FILE_APPEND);
+    if (!file_exists($log_dir)) mkdir($log_dir, 0777, true);
+    file_put_contents("$log_dir/user_errors.log", $log, FILE_APPEND);
 
     if (!isset($_SESSION['flash_errors'])) {
         $_SESSION['flash_errors'] = [];
     }
+    $_SESSION['flash_errors'][] = "[{$type}] {$errstr}";
 
-    $typename = $types[strtolower($type)] ?? 'Неизвестный тип';
-    $_SESSION['flash_errors'][] = "[{$typename}] {$message}";
+    if ($errno === E_USER_ERROR) {
+        exit("<strong>Критическая ошибка:</strong> $errstr<br>");
+    }
 
-    if ($exit) exit("<div>Работа остановлена.</div>");
+    return true;
 }
+
 
 function validate_email($email)
 {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        log_custom_error('validate', "Некорректный формат email: $email", __FILE__, __LINE__);
+        trigger_error("Некорректный формат email: $email", E_USER_NOTICE);
         return false;
     }
     return true;
@@ -49,7 +46,7 @@ function validate_email($email)
 function validate_password($pass)
 {
     if (mb_strlen($pass) < 6) {
-        log_custom_error('validate', "Пароль должен быть не менее 6 символов", __FILE__, __LINE__);
+        trigger_error("Пароль должен быть не менее 6 символов", E_USER_WARNING);
         return false;
     }
     return true;
@@ -59,7 +56,7 @@ function validate_unique_email($connection, $email)
 {
     $stmt = $connection->prepare("SELECT 1 FROM `Импортеры` WHERE `email` = ?");
     if (!$stmt) {
-        log_custom_error('db', "Ошибка подготовки запроса: " . $connection->error, __FILE__, __LINE__);
+        trigger_error("Ошибка подготовки запроса: " . $connection->error, E_USER_ERROR);
         return false;
     }
 
@@ -67,7 +64,7 @@ function validate_unique_email($connection, $email)
     $stmt->execute();
     $stmt->store_result();
     if ($stmt->num_rows > 0) {
-        log_custom_error('validate', "Пользователь с таким email уже зарегистрирован", __FILE__, __LINE__);
+        trigger_error("Пользователь с таким email уже зарегистрирован", E_USER_NOTICE);
         return false;
     }
 
@@ -77,7 +74,7 @@ function validate_unique_email($connection, $email)
 function validate_recaptcha($captchaResponse, $secretKey)
 {
     if (empty($captchaResponse)) {
-        log_custom_error('captcha', "Не пройдена проверка reCAPTCHA", __FILE__, __LINE__);
+        trigger_error("Не пройдена проверка reCAPTCHA", E_USER_WARNING);
         return false;
     }
 
@@ -89,7 +86,7 @@ function validate_recaptcha($captchaResponse, $secretKey)
 
     if (empty($data['success'])) {
         $codes = implode(', ', $data['error-codes'] ?? []);
-        log_custom_error('captcha', "Ошибка reCAPTCHA: $codes", __FILE__, __LINE__);
+        trigger_error("Ошибка reCAPTCHA: $codes", E_USER_NOTICE);
         return false;
     }
 
